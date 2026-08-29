@@ -59,4 +59,34 @@ struct ColorModelsTests {
     @Test func areaZoomDefaultsToOneTimes() {
         #expect(SamplingOptions.areaZooms[SamplingOptions.defaultAreaZoomIndex] == 1)
     }
+
+    @Test func captureRectConvertsPhysicalPixelsToDisplayPoints() {
+        let rect = ScreenCaptureGeometry.captureRect(
+            at: CGPoint(x: 100, y: 80),
+            pixelSide: 24,
+            displayBounds: CGRect(x: 0, y: 0, width: 500, height: 300),
+            pixelScale: 2
+        )
+        #expect(rect == CGRect(x: 94, y: 74, width: 12, height: 12))
+    }
+
+    @Test func captureRectStaysInsideNegativeOriginDisplay() {
+        let rect = ScreenCaptureGeometry.captureRect(
+            at: CGPoint(x: -500, y: 0),
+            pixelSide: 32,
+            displayBounds: CGRect(x: -500, y: 0, width: 500, height: 300),
+            pixelScale: 2
+        )
+        #expect(rect == CGRect(x: -500, y: 0, width: 16, height: 16))
+    }
+
+    @Test func imagePointMapsThePointerIntoCapturedPixels() {
+        let point = ScreenCaptureGeometry.imagePoint(
+            for: CGPoint(x: 100, y: 80),
+            captureRect: CGRect(x: 94, y: 74, width: 12, height: 12),
+            imageWidth: 24,
+            imageHeight: 24
+        )
+        #expect(point == CGPoint(x: 12, y: 12))
+    }
 }

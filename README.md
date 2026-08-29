@@ -65,7 +65,16 @@ mv ColorPicker.app /Applications/
 open /Applications/ColorPicker.app
 ```
 
-The first launch needs **Screen Recording** permission because macOS protects screen pixels. ColorPicker verifies access by trying a real ScreenCaptureKit frame. If capture is unavailable, use **Check Permission Again**; after an actual denial it opens the Screen Recording pane, where you can enable ColorPicker and return to the app. If an earlier ColorPicker build was already enabled, toggle it off and on once for this 1.0.1 transition; later updates retain the same designated requirement. The release is ad-hoc signed rather than notarized; if Gatekeeper blocks a downloaded archive, Control-click `ColorPicker.app` and choose **Open** once.
+The first launch needs **Screen Recording** permission because macOS protects screen pixels. ColorPicker verifies access by trying a real ScreenCaptureKit frame. If capture is unavailable, use **Check Permission Again**, grant access, and relaunch ColorPicker so the running process receives the updated permission.
+
+Release archives are ad-hoc signed rather than signed with an Apple Developer certificate. A rebuilt or updated binary can therefore have a different code hash even though its bundle identifier is unchanged. If System Settings shows ColorPicker as enabled but the app is still denied, quit ColorPicker and reset only its stale Screen Recording record:
+
+```zsh
+tccutil reset ScreenCapture com.jaewone.colorpicker
+open /Applications/ColorPicker.app
+```
+
+Approve the new request, then quit and open ColorPicker once more. This reset does not change another app's Screen Recording permission. If Gatekeeper blocks a downloaded archive, Control-click `ColorPicker.app` and choose **Open** once.
 
 ## Build from source
 

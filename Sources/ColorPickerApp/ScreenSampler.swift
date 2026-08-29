@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import CoreGraphics
+import OSLog
 import ScreenCaptureKit
 import SwiftUI
 import ColorPickerCore
@@ -31,6 +32,7 @@ final class ScreenSampler: ObservableObject {
     @Published var areaZoomIndex = ScreenSampler.defaultAreaZoomIndex
 
     private let captureProvider = ScreenCaptureProvider()
+    private let logger = Logger(subsystem: "com.jaewone.colorpicker", category: "ScreenSampler")
     private var timer: Timer?
     private var isCapturing = false
     private var copyAfterCapture = false
@@ -51,6 +53,7 @@ final class ScreenSampler: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
+        logger.notice("Starting screen sampling; preflight=\(String(CGPreflightScreenCaptureAccess()), privacy: .public)")
         status = .checking
         captureIfPossible(force: true)
         let timer = Timer(timeInterval: 1.0 / 20.0, repeats: true) { [weak self] _ in
@@ -152,6 +155,10 @@ final class ScreenSampler: ObservableObject {
                     self.copyCurrentColor()
                 }
             } catch {
+                let captureError = error as NSError
+                self.logger.error(
+                    "Capture failed domain=\(captureError.domain, privacy: .public) code=\(captureError.code, privacy: .public) description=\(captureError.localizedDescription, privacy: .public)"
+                )
                 self.copyAfterCapture = false
                 self.previewImage = nil
                 self.apertureRect = nil
@@ -198,6 +205,7 @@ private extension Int {
 @MainActor
 private final class ScreenCaptureProvider {
     private var shareableContent: SCShareableContent?
+    private let logger = Logger(subsystem: "com.jaewone.colorpicker", category: "ScreenCaptureProvider")
 
     struct CapturedFrame {
         let image: CGImage
@@ -205,6 +213,67 @@ private final class ScreenCaptureProvider {
     }
 
     func capture(at point: CGPoint, pixelSide: Int) async throws -> CapturedFrame {
+        if #available(macOS 26.0, *) {
+            return try await captureRectangle(at: point, pixelSide: pixelSide)
+        }
+        return try await captureWithContentFilter(at: point, pixelSide: pixelSide)
+    }
+
+    @available(macOS 26.0, *)
+    private func captureRectangle(at point: CGPoint, pixelSide: Int) async throws -> CapturedFrame {
+        var displayID = CGMainDisplayID()
+        var displayCount: UInt32 = 0
+        let displayError = CGGetDisplaysWithPoint(point, 1, &displayID, &displayCount)
+        guard displayError == .success, displayCount == 1 else {
+            throw SamplingError.noDisplayAtPointer
+        }
+
+        let displayBounds = CGDisplayBounds(displayID)
+        let horizontalScale = CGFloat(CGDisplayPixelsWide(displayID)) / displayBounds.width
+        let verticalScale = CGFloat(CGDisplayPixelsHigh(displayID)) / displayBounds.height
+        let pixelScale = max(horizontalScale, verticalScale, 1)
+        guard let captureRect = ScreenCaptureGeometry.captureRect(
+            at: point,
+            pixelSide: pixelSide,
+            displayBounds: displayBounds,
+            pixelScale: pixelScale
+        ) else {
+            throw SamplingError.noDisplayAtPointer
+        }
+
+        let configuration = SCScreenshotConfiguration()
+        configuration.width = pixelSide
+        configuration.height = pixelSide
+        configuration.showsCursor = false
+        configuration.dynamicRange = .sdr
+
+        let output: SCScreenshotOutput
+        do {
+            output = try await SCScreenshotManager.captureScreenshot(
+                rect: captureRect,
+                configuration: configuration
+            )
+        } catch {
+            let captureError = error as NSError
+            logger.error(
+                "Rectangle capture failed domain=\(captureError.domain, privacy: .public) code=\(captureError.code, privacy: .public) description=\(captureError.localizedDescription, privacy: .public)"
+            )
+            throw error
+        }
+
+        guard let image = output.sdrImage,
+              let pointInImage = ScreenCaptureGeometry.imagePoint(
+                for: point,
+                captureRect: captureRect,
+                imageWidth: image.width,
+                imageHeight: image.height
+              ) else {
+            throw SamplingError.noScreenshotImage
+        }
+        return CapturedFrame(image: image, pointInImage: pointInImage)
+    }
+
+    private func captureWithContentFilter(at point: CGPoint, pixelSide: Int) async throws -> CapturedFrame {
         var content = try await availableContent()
         let display: SCDisplay
         if let matchingDisplay = content.displays.first(where: { $0.frame.contains(point) }) {
@@ -261,10 +330,19 @@ private final class ScreenCaptureProvider {
         if let shareableContent {
             return shareableContent
         }
-        let content = try await SCShareableContent.excludingDesktopWindows(
-            false,
-            onScreenWindowsOnly: true
-        )
+        let content: SCShareableContent
+        do {
+            content = try await SCShareableContent.excludingDesktopWindows(
+                false,
+                onScreenWindowsOnly: true
+            )
+        } catch {
+            let captureError = error as NSError
+            logger.error(
+                "Shareable content failed domain=\(captureError.domain, privacy: .public) code=\(captureError.code, privacy: .public) description=\(captureError.localizedDescription, privacy: .public)"
+            )
+            throw error
+        }
         shareableContent = content
         return content
     }
@@ -272,6 +350,7 @@ private final class ScreenCaptureProvider {
 
 private enum SamplingError: LocalizedError {
     case noDisplayAtPointer
+    case noScreenshotImage
     case pixelConversionFailed
     case noPixelsInAperture
 
@@ -279,6 +358,8 @@ private enum SamplingError: LocalizedError {
         switch self {
         case .noDisplayAtPointer:
             "No display was found at the current pointer location."
+        case .noScreenshotImage:
+            "ScreenCaptureKit did not return an SDR screenshot image."
         case .pixelConversionFailed:
             "The captured screen image could not be converted for sampling."
         case .noPixelsInAperture:

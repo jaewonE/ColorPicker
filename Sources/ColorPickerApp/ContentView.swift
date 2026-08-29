@@ -180,7 +180,7 @@ private struct MagnifierPreview: View {
                 Text("화면 기록 권한이 필요합니다")
                     .font(.system(size: 10.5, weight: .medium))
                     .multilineTextAlignment(.center)
-                Text("설정에서 ColorPicker를 껐다 켠 뒤 다시 확인하세요")
+                Text("허용 상태인데도 실패하면 기존 항목을 제거한 뒤 다시 요청하세요")
                     .font(.system(size: 9.5))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
