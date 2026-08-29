@@ -205,6 +205,7 @@ private extension Int {
 @MainActor
 private final class ScreenCaptureProvider {
     private var shareableContent: SCShareableContent?
+    private var didLogCaptureGeometry = false
     private let logger = Logger(subsystem: "com.jaewone.colorpicker", category: "ScreenCaptureProvider")
 
     struct CapturedFrame {
@@ -229,9 +230,14 @@ private final class ScreenCaptureProvider {
         }
 
         let displayBounds = CGDisplayBounds(displayID)
-        let horizontalScale = CGFloat(CGDisplayPixelsWide(displayID)) / displayBounds.width
-        let verticalScale = CGFloat(CGDisplayPixelsHigh(displayID)) / displayBounds.height
-        let pixelScale = max(horizontalScale, verticalScale, 1)
+        guard let displayMode = CGDisplayCopyDisplayMode(displayID),
+              let pixelScale = ScreenCaptureGeometry.backingScale(
+                  displayBounds: displayBounds,
+                  backingPixelWidth: displayMode.pixelWidth,
+                  backingPixelHeight: displayMode.pixelHeight
+              ) else {
+            throw SamplingError.noDisplayAtPointer
+        }
         guard let captureRect = ScreenCaptureGeometry.captureRect(
             at: point,
             pixelSide: pixelSide,
@@ -239,6 +245,13 @@ private final class ScreenCaptureProvider {
             pixelScale: pixelScale
         ) else {
             throw SamplingError.noDisplayAtPointer
+        }
+
+        if !didLogCaptureGeometry {
+            didLogCaptureGeometry = true
+            logger.notice(
+                "Capture geometry display=\(displayID, privacy: .public) scale=\(pixelScale, privacy: .public) inputPixels=\(pixelSide, privacy: .public) rect=\(String(describing: captureRect), privacy: .public)"
+            )
         }
 
         let configuration = SCScreenshotConfiguration()

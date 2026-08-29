@@ -2,10 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.0.3 — 2026-08-29
+
+- Fixed Retina capture scale detection by using the display mode's backing pixel dimensions instead of its logical desktop dimensions.
+- Aligned rectangular captures to the physical backing-pixel grid and selected the pixel containing fractional pointer coordinates.
+- Prevented ScreenCaptureKit from downsampling a 2× Retina source before the magnifier enlarges it.
+- Added regression coverage for the MacBook `1440 × 900` logical / `2880 × 1800` backing configuration and fractional pointer positions.
+
 ## 1.0.2 — 2026-08-29
 
 - Added the required Screen Recording usage description, localized in English and Korean.
-- Added a macOS 26 rectangular screenshot path that captures only the pointer region and correctly converts between display points and physical pixels, including Retina and negative-origin displays.
+- Added a macOS 26 rectangular screenshot path that captures only the pointer region, plus initial display-point conversion and negative-origin display support.
 - Added capture-stage diagnostics and geometry regression tests.
 - Removed the ineffective custom ad-hoc designated requirement. Screen Recording records for ad-hoc builds can be bound to an obsolete code hash, so recovery now resets and re-grants permission for the installed build.
 - Verified the installed app against a fresh ColorPicker-only Screen Recording grant and confirmed live sampling on macOS 26.6.2.

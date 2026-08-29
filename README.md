@@ -31,6 +31,8 @@ The magnifier has an independent **Area Zoom** control:
 
 At the edge of a display, the aperture is shifted inward so it keeps its requested square size whenever the display has enough pixels.
 
+On Retina displays, ColorPicker derives the backing scale from the display mode's physical pixel dimensions and aligns every capture rectangle to that backing-pixel grid. The magnifier therefore enlarges native screen pixels without first downsampling them.
+
 ## Color formats and clipboard output
 
 | Format | Display range | Clipboard example |

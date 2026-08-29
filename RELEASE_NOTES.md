@@ -1,25 +1,23 @@
-# ColorPicker 1.0.2
+# ColorPicker 1.0.3
 
-This update fixes Screen Recording access for the installed build and corrects the prior release's ad-hoc signing assumption.
+This patch restores pixel-sharp magnifier output on Retina displays.
 
-- The app now includes the required Screen Recording usage description in English and Korean.
-- On macOS 26, ColorPicker captures the rectangular pointer region directly and maps display points to physical pixels for Retina and multi-display layouts.
-- Capture failures now record the ScreenCaptureKit error domain and code for diagnosis.
-- The ineffective custom ad-hoc designated requirement has been removed. If an older permission record is bound to a previous binary hash, reset ColorPicker's Screen Recording record and grant it to the installed build again.
-- The installed app was verified with a fresh permission grant and live cursor sampling on macOS 26.6.2.
+- Retina scale now comes from the display mode's backing pixel dimensions. On a MacBook configured as `1440 × 900`, ColorPicker correctly uses the `2880 × 1800` backing surface and a scale of `2.0`.
+- Capture rectangles are aligned to physical pixel boundaries, including when the pointer reports fractional screen coordinates.
+- ScreenCaptureKit no longer downsamples twice as many Retina pixels into the requested output size before the magnifier renders them.
+- Regression tests cover Retina scaling, fractional pointer alignment, negative-origin displays, aperture geometry, color averaging, and clipboard formatting.
 
-The ZIP is ad-hoc signed for Apple Silicon macOS 14+. After replacing an older ad-hoc build, permission may need to be reset with `tccutil reset ScreenCapture com.jaewone.colorpicker`, granted again, and followed by one app relaunch.
+The ZIP is ad-hoc signed for Apple Silicon macOS 14+. After replacing an older ad-hoc build, Screen Recording permission may need to be granted again as described in the README.
 
 ---
 
-# ColorPicker 1.0.2 (한국어)
+# ColorPicker 1.0.3 (한국어)
 
-이번 업데이트에서는 설치된 앱의 화면 기록 접근 문제를 수정하고, 이전 릴리스의 ad-hoc 서명 가정을 바로잡았습니다.
+이번 패치에서는 Retina 화면의 확대 미리보기가 원본 픽셀처럼 선명하게 보이도록 수정했습니다.
 
-- 화면 기록 권한 요청에 필요한 용도 설명을 영어와 한국어로 추가했습니다.
-- macOS 26에서는 포인터 주변 사각형을 직접 캡처하며, Retina 및 음수 원점 모니터 배치에서도 화면 좌표와 실제 픽셀을 올바르게 변환합니다.
-- 캡처 실패 시 ScreenCaptureKit 오류 도메인과 코드를 기록하도록 진단 정보를 추가했습니다.
-- 효과가 없었던 사용자 지정 ad-hoc 지정 요구사항을 제거했습니다. 이전 권한 레코드가 과거 바이너리 해시에 묶여 있다면 ColorPicker의 화면 기록 레코드를 초기화하고 현재 설치본에 다시 권한을 부여해야 합니다.
-- macOS 26.6.2에서 새 권한을 부여한 설치본의 실시간 커서 샘플링을 확인했습니다.
+- Retina 배율을 디스플레이 모드의 실제 backing 픽셀 크기로 계산합니다. `1440 × 900`으로 설정된 MacBook 화면에서는 `2880 × 1800` backing surface와 `2.0` 배율을 사용합니다.
+- 포인터 좌표에 소수점이 포함되어도 캡처 영역을 실제 픽셀 경계에 맞춥니다.
+- ScreenCaptureKit이 요청한 출력 크기를 만들기 전에 두 배 많은 Retina 픽셀을 축소하던 문제를 제거했습니다.
+- Retina 배율, 소수점 포인터 정렬, 음수 원점 모니터, 조리개, 색상 평균 및 클립보드 형식에 대한 회귀 테스트를 추가했습니다.
 
-ZIP은 Apple Silicon용 macOS 14 이상에서 동작하도록 ad-hoc 서명되어 있습니다. 이전 빌드를 교체한 뒤 권한 문제가 생기면 `tccutil reset ScreenCapture com.jaewone.colorpicker`로 ColorPicker 권한만 초기화하고 다시 허용한 다음 앱을 한 번 재실행하십시오.
+ZIP은 Apple Silicon용 macOS 14 이상에서 동작하도록 ad-hoc 서명되어 있습니다. 이전 ad-hoc 빌드를 교체한 뒤에는 README 안내에 따라 화면 기록 권한을 다시 부여해야 할 수 있습니다.

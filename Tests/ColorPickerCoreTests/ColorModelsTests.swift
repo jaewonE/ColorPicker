@@ -70,6 +70,25 @@ struct ColorModelsTests {
         #expect(rect == CGRect(x: 94, y: 74, width: 12, height: 12))
     }
 
+    @Test func backingScaleUsesPhysicalModePixelsOnRetina() {
+        let scale = ScreenCaptureGeometry.backingScale(
+            displayBounds: CGRect(x: -672, y: 1440, width: 1440, height: 900),
+            backingPixelWidth: 2880,
+            backingPixelHeight: 1800
+        )
+        #expect(scale == 2)
+    }
+
+    @Test func captureRectSnapsFractionalPointerToBackingPixelGrid() {
+        let rect = ScreenCaptureGeometry.captureRect(
+            at: CGPoint(x: 100.37, y: 80.62),
+            pixelSide: 24,
+            displayBounds: CGRect(x: 0, y: 0, width: 500, height: 300),
+            pixelScale: 2
+        )
+        #expect(rect == CGRect(x: 94, y: 74.5, width: 12, height: 12))
+    }
+
     @Test func captureRectStaysInsideNegativeOriginDisplay() {
         let rect = ScreenCaptureGeometry.captureRect(
             at: CGPoint(x: -500, y: 0),
@@ -83,6 +102,16 @@ struct ColorModelsTests {
     @Test func imagePointMapsThePointerIntoCapturedPixels() {
         let point = ScreenCaptureGeometry.imagePoint(
             for: CGPoint(x: 100, y: 80),
+            captureRect: CGRect(x: 94, y: 74, width: 12, height: 12),
+            imageWidth: 24,
+            imageHeight: 24
+        )
+        #expect(point == CGPoint(x: 12, y: 12))
+    }
+
+    @Test func imagePointSelectsThePixelContainingAFractionalPointer() {
+        let point = ScreenCaptureGeometry.imagePoint(
+            for: CGPoint(x: 100.49, y: 80.49),
             captureRect: CGRect(x: 94, y: 74, width: 12, height: 12),
             imageWidth: 24,
             imageHeight: 24
