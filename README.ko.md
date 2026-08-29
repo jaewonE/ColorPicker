@@ -4,6 +4,8 @@ ColorPicker는 현재 마우스 위치의 색상을 읽는 작은 macOS 네이�
 
 English documentation: [README.md](README.md)
 
+![ColorPicker demo](Assets/demo.png)
+
 ## 기능
 
 - Apple ScreenCaptureKit으로 현재 커서 주변을 캡처합니다.

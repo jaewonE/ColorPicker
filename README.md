@@ -7,6 +7,8 @@ ColorPicker is a small, native macOS app for reading the color under the current
 
 한국어 문서: [README.ko.md](README.ko.md)
 
+![ColorPicker demo](Assets/demo.png)
+
 ## What it does
 
 - Captures the current cursor region with Apple's ScreenCaptureKit.
