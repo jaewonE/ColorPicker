@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.0.4 — 2026-08-29
+
+- Terminate the ColorPicker application process when its last window closes, removing it from the app switcher and unregistering its process-scoped resources.
+
 ## 1.0.3 — 2026-08-29
 
 - Fixed Retina capture scale detection by using the display mode's backing pixel dimensions instead of its logical desktop dimensions.

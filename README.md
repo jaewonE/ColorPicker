@@ -16,6 +16,7 @@ ColorPicker is a small, native macOS app for reading the color under the current
 - Displays `RGB`, `RGB (normalized)`, `sRGB`, `sRGB (normalized)`, `P3`, or `Hex`.
 - Copies a displayed value when its value area is clicked.
 - Provides global shortcuts to lock the coordinate and copy a fresh sample.
+- Quits the application process when its last window is closed.
 
 ## Sampling behavior
 

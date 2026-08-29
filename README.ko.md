@@ -13,6 +13,7 @@ English documentation: [README.md](README.md)
 - `RGB`, `RGB (normalized)`, `sRGB`, `sRGB (normalized)`, `P3`, `Hex` 형식으로 표시합니다.
 - 색상 값 영역을 클릭하면 현재 값이 클립보드에 복사됩니다.
 - 전역 단축키로 좌표를 고정하고 최신 샘플을 복사합니다.
+- 마지막 창을 닫으면 앱 프로세스도 함께 종료됩니다.
 
 ## 대표 색상 선정 방식
 
