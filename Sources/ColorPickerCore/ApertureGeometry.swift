@@ -1,6 +1,12 @@
 import CoreGraphics
 import Foundation
 
+public enum SamplingOptions {
+    public static let apertureSizes = [1, 2, 4, 8, 16, 32]
+    public static let areaZooms: [CGFloat] = [0.5, 1, 2, 4, 8]
+    public static let defaultAreaZoomIndex = 1
+}
+
 public struct PixelRect: Equatable, Sendable {
     public let x: Int
     public let y: Int

@@ -6,70 +6,74 @@ struct ContentView: View {
     @ObservedObject var sampler: ScreenSampler
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Spacer(minLength: 0)
-                Picker("Color format", selection: $sampler.colorFormat) {
-                    ForEach(ColorFormat.allCases) { format in
-                        Text(format.rawValue).tag(format)
+        VStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                MagnifierPreview(
+                    image: sampler.previewImage,
+                    apertureRect: sampler.apertureRect,
+                    imagePixelSize: sampler.previewPixelSize,
+                    isLocked: sampler.isPositionLocked,
+                    status: sampler.status,
+                    requestPermission: sampler.requestScreenRecordingPermission,
+                    openSettings: sampler.openScreenRecordingSettings
+                )
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker("Color format", selection: $sampler.colorFormat) {
+                        ForEach(ColorFormat.allCases) { format in
+                            Text(format.rawValue).tag(format)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("고유 값으로 표시")
+
+                    ColorReadout(
+                        color: ColorFormatter.swatchColor(for: sampler.sampledColor),
+                        presentation: sampler.currentPresentation,
+                        copiedText: sampler.copiedText,
+                        copy: sampler.copyCurrentColor
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .frame(width: 222)
-                .accessibilityLabel("고유 값으로 표시")
+                .frame(maxWidth: .infinity, minHeight: 112, alignment: .top)
             }
 
-            HStack(alignment: .top, spacing: 18) {
-                VStack(alignment: .leading, spacing: 8) {
-                    MagnifierPreview(
-                        image: sampler.previewImage,
-                        apertureRect: sampler.apertureRect,
-                        imagePixelSize: sampler.previewPixelSize,
-                        isLocked: sampler.isPositionLocked,
-                        status: sampler.status,
-                        requestPermission: sampler.requestScreenRecordingPermission
-                    )
-
-                    SamplingSlider(
-                        title: "조리개 크기",
-                        valueText: "\(sampler.apertureSize)px × \(sampler.apertureSize)px",
-                        value: Binding(
-                            get: { Double(sampler.apertureIndex) },
-                            set: { sampler.apertureIndex = Int($0.rounded()) }
-                        ),
-                        range: 0...Double(ScreenSampler.apertureSizes.count - 1)
-                    )
-                    .onChange(of: sampler.apertureIndex) { _, _ in
-                        sampler.refreshForControlChange()
-                    }
-
-                    SamplingSlider(
-                        title: "영역 확대",
-                        valueText: "\(zoomText(sampler.areaZoom))×",
-                        value: Binding(
-                            get: { Double(sampler.areaZoomIndex) },
-                            set: { sampler.areaZoomIndex = Int($0.rounded()) }
-                        ),
-                        range: 0...Double(ScreenSampler.areaZooms.count - 1)
-                    )
-                    .onChange(of: sampler.areaZoomIndex) { _, _ in
-                        sampler.refreshForControlChange()
-                    }
-                }
-                .frame(width: 156)
-
-                ColorReadout(
-                    color: ColorFormatter.swatchColor(for: sampler.sampledColor),
-                    presentation: sampler.currentPresentation,
-                    copiedText: sampler.copiedText,
-                    copy: sampler.copyCurrentColor
+            HStack(spacing: 10) {
+                SamplingSlider(
+                    title: "조리개 크기",
+                    valueText: "\(sampler.apertureSize)px × \(sampler.apertureSize)px",
+                    value: Binding(
+                        get: { Double(sampler.apertureIndex) },
+                        set: { sampler.apertureIndex = Int($0.rounded()) }
+                    ),
+                    range: 0...Double(ScreenSampler.apertureSizes.count - 1)
                 )
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .onChange(of: sampler.apertureIndex) { _, _ in
+                    sampler.refreshForControlChange()
+                }
+
+                Divider()
+                    .frame(height: 26)
+
+                SamplingSlider(
+                    title: "영역 확대",
+                    valueText: "\(zoomText(sampler.areaZoom))×",
+                    value: Binding(
+                        get: { Double(sampler.areaZoomIndex) },
+                        set: { sampler.areaZoomIndex = Int($0.rounded()) }
+                    ),
+                    range: 0...Double(ScreenSampler.areaZooms.count - 1)
+                )
+                .onChange(of: sampler.areaZoomIndex) { _, _ in
+                    sampler.refreshForControlChange()
+                }
             }
         }
-        .padding(14)
-        .frame(width: 424, height: 336)
+        .padding(10)
+        .frame(width: 368, height: 188)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -93,9 +97,11 @@ private struct SamplingSlider: View {
                 Spacer(minLength: 2)
                 Text(valueText)
                     .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
-            .font(.system(size: 10.5))
+            .font(.system(size: 10))
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -106,10 +112,11 @@ private struct MagnifierPreview: View {
     let isLocked: Bool
     let status: ScreenSampler.Status
     let requestPermission: () -> Void
+    let openSettings: () -> Void
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 0)
+            Rectangle()
                 .fill(Color(nsColor: .controlBackgroundColor))
 
             if let image {
@@ -138,22 +145,8 @@ private struct MagnifierPreview: View {
                         }
                     }
                 }
-            } else if case .needsScreenRecordingPermission = status {
-                VStack(spacing: 7) {
-                    Text("화면 기록 권한이 필요합니다")
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 11, weight: .medium))
-                    Button("권한 요청") {
-                        requestPermission()
-                    }
-                    .controlSize(.small)
-                }
-                .padding(8)
-            } else if case let .failed(message) = status {
-                Text(message)
-                    .font(.system(size: 10.5))
-                    .multilineTextAlignment(.center)
-                    .padding(8)
+            } else {
+                statusView
             }
 
             if isLocked {
@@ -165,9 +158,55 @@ private struct MagnifierPreview: View {
                     .accessibilityLabel("좌표 고정됨")
             }
         }
-        .frame(width: 156, height: 156)
+        .frame(width: 112, height: 112)
         .overlay(Rectangle().stroke(Color.black.opacity(0.12), lineWidth: 1))
         .clipped()
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch status {
+        case .checking:
+            VStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("화면 캡처 권한 확인 중…")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(8)
+        case .needsScreenRecordingPermission:
+            VStack(spacing: 5) {
+                Text("화면 기록 권한이 필요합니다")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .multilineTextAlignment(.center)
+                Text("설정에서 ColorPicker를 껐다 켠 뒤 다시 확인하세요")
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("권한 다시 확인", action: requestPermission)
+                    .controlSize(.mini)
+                Button("시스템 설정 열기", action: openSettings)
+                    .controlSize(.mini)
+            }
+            .padding(6)
+        case let .failed(message):
+            VStack(spacing: 5) {
+                Text("화면 캡처를 시작할 수 없습니다")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .multilineTextAlignment(.center)
+                Text(message)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                Button("다시 시도", action: requestPermission)
+                    .controlSize(.mini)
+            }
+            .padding(6)
+        case .ready:
+            EmptyView()
+        }
     }
 }
 
@@ -178,47 +217,49 @@ private struct ColorReadout: View {
     let copy: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            RoundedRectangle(cornerRadius: 0)
+        HStack(alignment: .center, spacing: 10) {
+            Rectangle()
                 .fill(Color(nsColor: color))
                 .overlay(Rectangle().stroke(Color.black.opacity(0.16), lineWidth: 1))
-                .frame(width: 72, height: 72)
+                .frame(width: 64, height: 64)
                 .accessibilityLabel("Current sampled color")
 
-            Button(action: copy) {
-                VStack(alignment: .leading, spacing: 5) {
-                    if presentation.isSingleValue {
-                        Text(presentation.values[0])
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(.primary)
-                    } else {
-                        ForEach(Array(zip(presentation.labels, presentation.values)), id: \.0) { label, value in
-                            HStack(spacing: 8) {
-                                Text("\(label):")
-                                    .frame(width: 18, alignment: .trailing)
-                                Text(value)
+            VStack(alignment: .leading, spacing: 5) {
+                Button(action: copy) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if presentation.isSingleValue {
+                            Text(presentation.values[0])
+                                .font(.system(size: 13, design: .monospaced))
+                                .foregroundStyle(.primary)
+                        } else {
+                            ForEach(Array(zip(presentation.labels, presentation.values)), id: \.0) { label, value in
+                                HStack(spacing: 7) {
+                                    Text("\(label):")
+                                        .frame(width: 18, alignment: .trailing)
+                                    Text(value)
+                                }
                             }
                         }
                     }
+                    .font(.system(size: 12, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-                .font(.system(size: 13, design: .monospaced))
-                .frame(minWidth: 132, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("Click to copy \(presentation.clipboardText)")
-            .accessibilityLabel("Copy color value")
+                .buttonStyle(.plain)
+                .help("색상 값을 클립보드에 복사")
+                .accessibilityLabel("Copy color value")
 
-            if copiedText != nil {
-                Label("클립보드에 복사됨", systemImage: "checkmark")
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("클릭하여 복사")
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.secondary)
+                if copiedText != nil {
+                    Label("클립보드에 복사됨", systemImage: "checkmark")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("클릭하여 복사")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.top, 2)
     }
 }

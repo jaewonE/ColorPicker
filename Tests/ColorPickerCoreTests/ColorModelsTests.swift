@@ -55,4 +55,8 @@ struct ColorModelsTests {
         ])
         #expect(average == LinearRGB(red: 0.5, green: 0.5, blue: 0.5))
     }
+
+    @Test func areaZoomDefaultsToOneTimes() {
+        #expect(SamplingOptions.areaZooms[SamplingOptions.defaultAreaZoomIndex] == 1)
+    }
 }

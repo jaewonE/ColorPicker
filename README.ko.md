@@ -62,7 +62,7 @@ mv ColorPicker.app /Applications/
 open /Applications/ColorPicker.app
 ```
 
-최초 실행 시 macOS 화면 픽셀 보호 정책 때문에 **화면 기록** 권한이 필요합니다. 앱의 **권한 요청** 버튼을 누르고, macOS가 열어 주는 시스템 설정에서 ColorPicker를 허용한 뒤 앱을 다시 여십시오. 릴리스는 notarization이 아닌 ad-hoc 서명 상태이므로, 다운로드한 앱을 Gatekeeper가 막으면 한 번 Control-클릭 후 **열기**를 선택하면 됩니다.
+최초 실행 시 macOS 화면 픽셀 보호 정책 때문에 **화면 기록** 권한이 필요합니다. ColorPicker는 실제 ScreenCaptureKit 프레임을 시도해 권한을 확인합니다. 캡처를 사용할 수 없으면 미리보기의 **권한 다시 확인**을 누르십시오. 실제 거부가 확인되면 화면 기록 설정이 열리므로 ColorPicker를 허용한 뒤 앱으로 돌아오면 됩니다. 이전 ColorPicker 빌드를 이미 허용했다면 1.0.1 전환 시 한 번만 끈 뒤 다시 켜십시오. 이후 업데이트는 동일한 지정 요구사항을 사용해 권한을 유지합니다. 릴리스는 notarization이 아닌 ad-hoc 서명 상태이므로, 다운로드한 앱을 Gatekeeper가 막으면 한 번 Control-클릭 후 **열기**를 선택하면 됩니다.
 
 ## 소스에서 빌드
 

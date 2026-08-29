@@ -7,10 +7,12 @@ import ColorPickerCore
 
 @MainActor
 final class ScreenSampler: ObservableObject {
-    static let apertureSizes = [1, 2, 4, 8, 16, 32]
-    static let areaZooms: [CGFloat] = [0.5, 1, 2, 4, 8]
+    static let apertureSizes = SamplingOptions.apertureSizes
+    static let areaZooms = SamplingOptions.areaZooms
+    static let defaultAreaZoomIndex = SamplingOptions.defaultAreaZoomIndex
 
     enum Status: Equatable {
+        case checking
         case ready
         case needsScreenRecordingPermission
         case failed(String)
@@ -20,18 +22,19 @@ final class ScreenSampler: ObservableObject {
     @Published private(set) var previewImage: NSImage?
     @Published private(set) var apertureRect: PixelRect?
     @Published private(set) var previewPixelSize = CGSize.zero
-    @Published private(set) var status: Status = .needsScreenRecordingPermission
+    @Published private(set) var status: Status = .checking
     @Published private(set) var isPositionLocked = false
     @Published private(set) var copiedText: String?
 
     @Published var colorFormat: ColorFormat = .rgbNormalized
     @Published var apertureIndex = 0
-    @Published var areaZoomIndex = 1
+    @Published var areaZoomIndex = ScreenSampler.defaultAreaZoomIndex
 
     private let captureProvider = ScreenCaptureProvider()
     private var timer: Timer?
     private var isCapturing = false
     private var copyAfterCapture = false
+    private var openSettingsAfterPermissionRetry = false
     private var lockedPoint: CGPoint?
 
     var apertureSize: Int {
@@ -48,7 +51,8 @@ final class ScreenSampler: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
-        refreshPermissionState(promptIfNeeded: true)
+        status = .checking
+        captureIfPossible(force: true)
         let timer = Timer(timeInterval: 1.0 / 20.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.captureIfPossible()
@@ -64,7 +68,20 @@ final class ScreenSampler: ObservableObject {
     }
 
     func requestScreenRecordingPermission() {
-        refreshPermissionState(promptIfNeeded: true)
+        status = .checking
+        captureProvider.invalidateContent()
+        openSettingsAfterPermissionRetry = true
+        if !CGPreflightScreenCaptureAccess() {
+            _ = CGRequestScreenCaptureAccess()
+        }
+        captureIfPossible(force: true)
+    }
+
+    func openScreenRecordingSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else {
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     func toggleCoordinateLock() {
@@ -85,13 +102,8 @@ final class ScreenSampler: ObservableObject {
     /// Captures a fresh frame before copying whenever possible, so the shortcut
     /// reflects the pointer position at the time it was pressed.
     func saveCurrentColor() {
-        guard status == .ready else { return }
-        if isCapturing {
-            copyAfterCapture = true
-        } else {
-            copyAfterCapture = true
-            captureIfPossible()
-        }
+        copyAfterCapture = true
+        captureIfPossible(force: true)
     }
 
     func copyCurrentColor() {
@@ -105,25 +117,11 @@ final class ScreenSampler: ObservableObject {
         }
     }
 
-    private func refreshPermissionState(promptIfNeeded: Bool) {
-        if CGPreflightScreenCaptureAccess() {
-            status = .ready
-            captureIfPossible()
-            return
-        }
-
-        if promptIfNeeded, CGRequestScreenCaptureAccess() {
-            status = .ready
-            captureIfPossible()
-        } else {
-            status = .needsScreenRecordingPermission
-        }
-    }
-
-    private func captureIfPossible() {
-        guard status == .ready, !isCapturing else { return }
+    private func captureIfPossible(force: Bool = false) {
+        guard !isCapturing else { return }
+        guard force || status == .ready || status == .checking else { return }
         guard let point = lockedPoint ?? currentMouseLocation() else {
-            status = .failed("The current mouse location could not be read.")
+            status = .failed("현재 마우스 위치를 읽을 수 없습니다.")
             return
         }
 
@@ -148,14 +146,37 @@ final class ScreenSampler: ObservableObject {
                 self.apertureRect = result.apertureRect
                 self.previewPixelSize = CGSize(width: frame.image.width, height: frame.image.height)
                 self.status = .ready
+                self.openSettingsAfterPermissionRetry = false
                 if self.copyAfterCapture {
                     self.copyAfterCapture = false
                     self.copyCurrentColor()
                 }
             } catch {
-                self.status = .failed(error.localizedDescription)
+                self.copyAfterCapture = false
+                self.previewImage = nil
+                self.apertureRect = nil
+                self.previewPixelSize = .zero
+                if self.isScreenRecordingPermissionError(error) {
+                    self.status = .needsScreenRecordingPermission
+                    let shouldOpenSettings = self.openSettingsAfterPermissionRetry
+                    self.openSettingsAfterPermissionRetry = false
+                    if shouldOpenSettings {
+                        self.openScreenRecordingSettings()
+                    }
+                } else {
+                    self.openSettingsAfterPermissionRetry = false
+                    self.status = .failed("화면 캡처에 실패했습니다: \(error.localizedDescription)")
+                }
             }
         }
+    }
+
+    /// `CGPreflightScreenCaptureAccess()` can be stale for an already-granted
+    /// TCC record, so ScreenCaptureKit's actual user-declined error is the
+    /// authoritative signal for the permission UI.
+    private func isScreenRecordingPermissionError(_ error: Error) -> Bool {
+        let error = error as NSError
+        return error.domain == SCStreamErrorDomain && error.code == -3801 // SCStreamErrorUserDeclined
     }
 
     private func previewSourcePixelSide(for aperture: Int, zoom: CGFloat) -> Int {
@@ -230,6 +251,10 @@ private final class ScreenCaptureProvider {
             y: (localPoint.y - sourceRect.minY) / sourceRect.height * CGFloat(image.height)
         )
         return CapturedFrame(image: image, pointInImage: pointInImage)
+    }
+
+    func invalidateContent() {
+        shareableContent = nil
     }
 
     private func availableContent() async throws -> SCShareableContent {

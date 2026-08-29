@@ -17,7 +17,7 @@ struct ColorPickerApplication: App {
                     sampler.saveCurrentColor()
                 }
         }
-        .defaultSize(width: 424, height: 336)
+        .defaultSize(width: 368, height: 188)
         .windowResizability(.contentSize)
         .commands {
             CommandMenu("ColorPicker") {

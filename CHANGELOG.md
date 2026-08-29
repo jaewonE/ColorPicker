@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## 1.0.1 — 2026-08-29
+
+- Replaced the unreliable CoreGraphics preflight gate with a real ScreenCaptureKit capture attempt, so an already-authorized app can begin sampling immediately.
+- Added clear checking, retry, and System Settings paths for unavailable Screen Recording access.
+- Added a stable ad-hoc designated requirement so a Screen Recording grant remains valid across future ColorPicker updates.
+- Kept area zoom at its specified default of 1× and added a regression test for it.
+- Reworked the window into a compact layout: the format menu spans the color swatch/readout column, values sit beside the swatch, and both sliders share one horizontal row.
+
 ## 1.0.0 — 2026-08-28
 
 - Initial native macOS ColorPicker release.
